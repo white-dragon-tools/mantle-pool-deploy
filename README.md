@@ -186,6 +186,9 @@ Variable 名称：`SLOT_POOL_{POOL_NAME}`（如 `SLOT_POOL_BUGFIX`）
 
 使用重试机制处理并发冲突，最多重试 3 次。
 
+### 发布
+必须编译后再发布
+
 ## 工具链
 
 - [Mantle](https://github.com/blake-mealey/mantle) - Roblox 部署工具
