@@ -1,9 +1,9 @@
 import * as core from '@actions/core';
 import * as github from '@actions/github';
-import { ActionInputs } from './types';
-import { allocateSlot, releaseSlot, cleanupOldSlots } from './slot-pool';
+import { ActionInputs, PoolState } from './types';
+import { allocateSlot, releaseSlot, cleanupOldSlots, getSlotMantleState, setSlotMantleState } from './slot-pool';
 import { getPoolState, savePoolState } from './github-api';
-import { installMantle, deployWithMantle } from './mantle';
+import { installMantle, deployWithMantle, restoreMantleState, saveMantleState } from './mantle';
 
 function getInputs(): ActionInputs {
   return {
@@ -29,7 +29,7 @@ async function handlePoolDeploy(inputs: ActionInputs): Promise<void> {
   const octokit = github.getOctokit(inputs.token);
   const { owner, repo } = github.context.repo;
 
-  const state = await getPoolState(octokit, owner, repo, inputs.pool, inputs.poolCount);
+  let state = await getPoolState(octokit, owner, repo, inputs.pool, inputs.poolCount);
 
   if (inputs.event === 'delete') {
     const releasedSlot = releaseSlot(state, inputs.branch);
@@ -47,8 +47,6 @@ async function handlePoolDeploy(inputs: ActionInputs): Promise<void> {
     throw new Error('Failed to allocate slot');
   }
 
-  await savePoolState(octokit, owner, repo, inputs.pool, state);
-
   core.setOutput('environment', result.environment);
   core.setOutput('slot', result.slot);
   if (result.preemptedBranch) {
@@ -61,12 +59,45 @@ async function handlePoolDeploy(inputs: ActionInputs): Promise<void> {
   } else {
     core.info(`Reusing slot ${result.slot} for branch ${inputs.branch}`);
   }
+
+  // Restore previous Mantle state if exists (only for same branch reuse)
+  const previousMantleState = result.preemptedBranch ? undefined : getSlotMantleState(state, result.slot);
+  restoreMantleState(inputs.config, previousMantleState);
+
+  // Save initial state (without mantle state yet)
+  await savePoolState(octokit, owner, repo, inputs.pool, state);
+
+  await installMantle();
+  await deployWithMantle({
+    config: inputs.config,
+    environment: result.environment,
+    access: inputs.access,
+    dynamicDescription: inputs.dynamicDescription,
+    branch: inputs.branch,
+    roblosecurity: inputs.roblosecurity,
+  });
+
+  // Save Mantle state back to slot
+  const newMantleState = saveMantleState(inputs.config);
+  state = await getPoolState(octokit, owner, repo, inputs.pool, inputs.poolCount);
+  setSlotMantleState(state, result.slot, newMantleState);
+  await savePoolState(octokit, owner, repo, inputs.pool, state);
 }
 
 async function handleFixedDeploy(inputs: ActionInputs): Promise<void> {
   const environment = inputs.branch === 'main' ? 'production' : inputs.branch;
   core.setOutput('environment', environment);
   core.info(`Deploying to fixed environment: ${environment}`);
+
+  await installMantle();
+  await deployWithMantle({
+    config: inputs.config,
+    environment,
+    access: inputs.access,
+    dynamicDescription: inputs.dynamicDescription,
+    branch: inputs.branch,
+    roblosecurity: inputs.roblosecurity,
+  });
 }
 
 async function handleCleanup(inputs: ActionInputs): Promise<void> {

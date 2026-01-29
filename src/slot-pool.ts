@@ -141,3 +141,14 @@ export function cleanupOldSlots(
 
   return { releasedSlots, releasedBranches };
 }
+
+export function getSlotMantleState(state: PoolState, slot: number): string | undefined {
+  return state.slots[String(slot)]?.mantleState;
+}
+
+export function setSlotMantleState(state: PoolState, slot: number, mantleState: string | undefined): void {
+  const slotInfo = state.slots[String(slot)];
+  if (slotInfo) {
+    slotInfo.mantleState = mantleState;
+  }
+}

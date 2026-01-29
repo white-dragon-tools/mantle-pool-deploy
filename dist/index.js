@@ -30039,6 +30039,7 @@ const core = __importStar(__nccwpck_require__(7484));
 const github = __importStar(__nccwpck_require__(3228));
 const slot_pool_1 = __nccwpck_require__(894);
 const github_api_1 = __nccwpck_require__(8133);
+const mantle_1 = __nccwpck_require__(4992);
 function getInputs() {
     return {
         config: core.getInput('config', { required: true }),
@@ -30060,7 +30061,7 @@ async function handlePoolDeploy(inputs) {
     }
     const octokit = github.getOctokit(inputs.token);
     const { owner, repo } = github.context.repo;
-    const state = await (0, github_api_1.getPoolState)(octokit, owner, repo, inputs.pool, inputs.poolCount);
+    let state = await (0, github_api_1.getPoolState)(octokit, owner, repo, inputs.pool, inputs.poolCount);
     if (inputs.event === 'delete') {
         const releasedSlot = (0, slot_pool_1.releaseSlot)(state, inputs.branch);
         if (releasedSlot !== null) {
@@ -30076,7 +30077,6 @@ async function handlePoolDeploy(inputs) {
     if (!result) {
         throw new Error('Failed to allocate slot');
     }
-    await (0, github_api_1.savePoolState)(octokit, owner, repo, inputs.pool, state);
     core.setOutput('environment', result.environment);
     core.setOutput('slot', result.slot);
     if (result.preemptedBranch) {
@@ -30089,11 +30089,39 @@ async function handlePoolDeploy(inputs) {
     else {
         core.info(`Reusing slot ${result.slot} for branch ${inputs.branch}`);
     }
+    // Restore previous Mantle state if exists (only for same branch reuse)
+    const previousMantleState = result.preemptedBranch ? undefined : (0, slot_pool_1.getSlotMantleState)(state, result.slot);
+    (0, mantle_1.restoreMantleState)(inputs.config, previousMantleState);
+    // Save initial state (without mantle state yet)
+    await (0, github_api_1.savePoolState)(octokit, owner, repo, inputs.pool, state);
+    await (0, mantle_1.installMantle)();
+    await (0, mantle_1.deployWithMantle)({
+        config: inputs.config,
+        environment: result.environment,
+        access: inputs.access,
+        dynamicDescription: inputs.dynamicDescription,
+        branch: inputs.branch,
+        roblosecurity: inputs.roblosecurity,
+    });
+    // Save Mantle state back to slot
+    const newMantleState = (0, mantle_1.saveMantleState)(inputs.config);
+    state = await (0, github_api_1.getPoolState)(octokit, owner, repo, inputs.pool, inputs.poolCount);
+    (0, slot_pool_1.setSlotMantleState)(state, result.slot, newMantleState);
+    await (0, github_api_1.savePoolState)(octokit, owner, repo, inputs.pool, state);
 }
 async function handleFixedDeploy(inputs) {
     const environment = inputs.branch === 'main' ? 'production' : inputs.branch;
     core.setOutput('environment', environment);
     core.info(`Deploying to fixed environment: ${environment}`);
+    await (0, mantle_1.installMantle)();
+    await (0, mantle_1.deployWithMantle)({
+        config: inputs.config,
+        environment,
+        access: inputs.access,
+        dynamicDescription: inputs.dynamicDescription,
+        branch: inputs.branch,
+        roblosecurity: inputs.roblosecurity,
+    });
 }
 async function handleCleanup(inputs) {
     if (!inputs.pool || !inputs.poolCount) {
@@ -30139,6 +30167,118 @@ run();
 
 /***/ }),
 
+/***/ 4992:
+/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
+
+"use strict";
+
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
+Object.defineProperty(exports, "__esModule", ({ value: true }));
+exports.installMantle = installMantle;
+exports.getMantleStateFilePath = getMantleStateFilePath;
+exports.restoreMantleState = restoreMantleState;
+exports.saveMantleState = saveMantleState;
+exports.deployWithMantle = deployWithMantle;
+const core = __importStar(__nccwpck_require__(7484));
+const exec = __importStar(__nccwpck_require__(5236));
+const fs = __importStar(__nccwpck_require__(9896));
+const path = __importStar(__nccwpck_require__(6928));
+const os = __importStar(__nccwpck_require__(857));
+const MANTLE_STATE_FILE = '.mantle-state.yml';
+async function installMantle() {
+    core.info('Installing Rokit...');
+    const platform = os.platform();
+    if (platform === 'win32') {
+        await exec.exec('powershell', ['-Command', 'irm https://raw.githubusercontent.com/rojo-rbx/rokit/main/scripts/install.ps1 | iex']);
+    }
+    else {
+        await exec.exec('bash', ['-c', 'curl -sSf https://raw.githubusercontent.com/rojo-rbx/rokit/main/scripts/install.sh | bash']);
+    }
+    const homeDir = os.homedir();
+    const rokitBinDir = path.join(homeDir, '.rokit', 'bin');
+    core.addPath(rokitBinDir);
+    core.info('Installing Mantle...');
+    await exec.exec('rokit', ['init']);
+    await exec.exec('rokit', ['trust', 'blake-mealey/mantle']);
+    await exec.exec('rokit', ['add', 'blake-mealey/mantle']);
+    await exec.exec('rokit', ['install']);
+    core.info('Mantle installed successfully');
+}
+function getMantleStateFilePath(configPath) {
+    const configDir = path.dirname(configPath);
+    return path.join(configDir, MANTLE_STATE_FILE);
+}
+function restoreMantleState(configPath, mantleState) {
+    if (!mantleState) {
+        core.info('No previous Mantle state to restore');
+        return;
+    }
+    const stateFilePath = getMantleStateFilePath(configPath);
+    core.info(`Restoring Mantle state to ${stateFilePath}`);
+    fs.writeFileSync(stateFilePath, mantleState, 'utf-8');
+}
+function saveMantleState(configPath) {
+    const stateFilePath = getMantleStateFilePath(configPath);
+    if (!fs.existsSync(stateFilePath)) {
+        core.info('No Mantle state file generated');
+        return undefined;
+    }
+    core.info(`Saving Mantle state from ${stateFilePath}`);
+    return fs.readFileSync(stateFilePath, 'utf-8');
+}
+async function deployWithMantle(options) {
+    const { config, environment, access, dynamicDescription, branch, roblosecurity } = options;
+    if (!fs.existsSync(config)) {
+        throw new Error(`Mantle config file not found: ${config}`);
+    }
+    const args = ['deploy', '--environment', environment, '--access', access];
+    const env = {
+        ...process.env,
+        ROBLOSECURITY: roblosecurity,
+    };
+    if (dynamicDescription) {
+        const sha = process.env.GITHUB_SHA?.substring(0, 7) || 'unknown';
+        env.MANTLE_DESCRIPTION_SUFFIX = `\n\nBranch: ${branch}\nCommit: ${sha}`;
+    }
+    core.info(`Running: mantle ${args.join(' ')}`);
+    await exec.exec('mantle', args, { env });
+}
+
+
+/***/ }),
+
 /***/ 894:
 /***/ ((__unused_webpack_module, exports) => {
 
@@ -30155,6 +30295,8 @@ exports.findOldestSlot = findOldestSlot;
 exports.allocateSlot = allocateSlot;
 exports.releaseSlot = releaseSlot;
 exports.cleanupOldSlots = cleanupOldSlots;
+exports.getSlotMantleState = getSlotMantleState;
+exports.setSlotMantleState = setSlotMantleState;
 function createEmptyPoolState(maxSlots) {
     const slots = {};
     for (let i = 1; i <= maxSlots; i++) {
@@ -30270,6 +30412,15 @@ function cleanupOldSlots(state, days, now) {
         }
     }
     return { releasedSlots, releasedBranches };
+}
+function getSlotMantleState(state, slot) {
+    return state.slots[String(slot)]?.mantleState;
+}
+function setSlotMantleState(state, slot, mantleState) {
+    const slotInfo = state.slots[String(slot)];
+    if (slotInfo) {
+        slotInfo.mantleState = mantleState;
+    }
 }
 
 

@@ -1,6 +1,7 @@
 export interface SlotInfo {
     branch: string;
     updated: string;
+    mantleState?: string;
 }
 export interface PoolState {
     max_slots: number;

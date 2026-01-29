@@ -12,3 +12,5 @@ export declare function cleanupOldSlots(state: PoolState, days: number, now?: Da
     releasedSlots: number[];
     releasedBranches: string[];
 };
+export declare function getSlotMantleState(state: PoolState, slot: number): string | undefined;
+export declare function setSlotMantleState(state: PoolState, slot: number, mantleState: string | undefined): void;

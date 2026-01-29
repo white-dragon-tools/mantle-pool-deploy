@@ -7,11 +7,12 @@ Roblox Experience 部署 Action，提供槽位池管理和自动部署能力。
 - **槽位池管理** - 预定义固定数量的 Experience 槽位，按需分配
 - **自动分配与回收** - 分支推送自动获取槽位，删除或超时自动释放
 - **抢占机制** - 槽位不足时，自动抢占最久未更新的槽位
-- **零外部依赖** - 使用 GitHub Repository Variable 存储状态，无需 AWS
+- **零外部依赖** - 使用 GitHub Repository Variable 存储状态，无需 AWS/S3
+- **Mantle 状态持久化** - 自动保存和恢复每个槽位的 Mantle 状态（Experience ID、Place ID 等），无需配置远程状态存储
 
 ## 快速开始
 
-### 1. 创建 Mantle 配置文件 `mantle-config.yml`
+### 1. 创建 Mantle 配置文件 `mantle.yml`
 
 ```yaml
 # Mantle 游戏配置
@@ -43,7 +44,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: your-org/roblox-deploy-action@v1
         with:
-          config: mantle-config.yml
+          config: mantle.yml
           branch: ${{ github.ref_name }}
           access: ${{ github.ref_name == 'main' && 'public' || 'private' }}
           dynamic_description: ${{ github.ref_name != 'main' }}
@@ -69,7 +70,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: your-org/roblox-deploy-action@v1
         with:
-          config: mantle-config.yml
+          config: mantle.yml
           pool: ${{ startsWith(github.ref_name, 'bugfix/') && 'bugfix' || 'feature' }}
           pool_count: ${{ startsWith(github.ref_name, 'bugfix/') && '10' || '5' }}
           branch: ${{ github.ref_name }}
@@ -89,7 +90,7 @@ jobs:
 
 ## 配置说明
 
-### mantle-config.yml
+### mantle.yml
 
 Mantle 游戏配置，参考 [Mantle 文档](https://github.com/blake-mealey/mantle)。
 
@@ -157,7 +158,7 @@ jobs:
       - name: Cleanup
         uses: your-org/roblox-deploy-action@v1
         with:
-          config: mantle-config.yml
+          config: mantle.yml
           action: cleanup
           cleanup_days: 7
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -173,14 +174,27 @@ jobs:
 {
   "max_slots": 10,
   "slots": {
-    "1": { "branch": "bugfix/fix-login", "updated": "2024-01-15T10:30:00Z" },
+    "1": {
+      "branch": "bugfix/fix-login",
+      "updated": "2024-01-15T10:30:00Z",
+      "mantleState": "# Mantle state YAML content..."
+    },
     "2": null,
-    "3": { "branch": "bugfix/fix-ui", "updated": "2024-01-14T08:00:00Z" }
+    "3": {
+      "branch": "bugfix/fix-ui",
+      "updated": "2024-01-14T08:00:00Z",
+      "mantleState": "..."
+    }
   }
 }
 ```
 
 Variable 名称：`SLOT_POOL_{POOL_NAME}`（如 `SLOT_POOL_BUGFIX`）
+
+每个槽位除了记录分支和更新时间，还会保存该槽位的 Mantle 状态（`.mantle-state.yml` 内容）。这样：
+- 同一分支多次部署会复用已创建的 Roblox 资源
+- 无需配置 S3/R2 等远程状态存储
+- 槽位被抢占时，新分支会创建全新的 Experience
 
 ### 并发控制
 

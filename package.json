@@ -3,6 +3,14 @@
   "version": "1.0.0",
   "description": "Roblox Experience 部署 Action，提供槽位池管理和自动部署能力",
   "main": "dist/index.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/white-dragon-tools/mantle-pool-deploy.git"
+  },
+  "homepage": "https://github.com/white-dragon-tools/mantle-pool-deploy",
+  "bugs": {
+    "url": "https://github.com/white-dragon-tools/mantle-pool-deploy/issues"
+  },
   "scripts": {
     "build": "ncc build src/index.ts -o dist --source-map --license licenses.txt",
     "test": "vitest run",
@@ -27,6 +35,7 @@
   },
   "dependencies": {
     "@actions/core": "^1.10.1",
+    "@actions/exec": "^1.1.1",
     "@actions/github": "^6.0.0"
   }
 }
