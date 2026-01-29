@@ -1,0 +1,57 @@
+name: 'Roblox Deploy Action'
+description: 'Roblox Experience 部署 Action，提供槽位池管理和自动部署能力'
+author: 'White Dragon Tools'
+
+inputs:
+  config:
+    description: 'Mantle 配置文件路径'
+    required: true
+  branch:
+    description: '当前分支名'
+    required: true
+  pool:
+    description: '槽位池名称（槽位池模式）'
+    required: false
+  pool_count:
+    description: '槽位数量（槽位池模式必填）'
+    required: false
+  event:
+    description: '事件类型 push/delete（槽位池模式必填）'
+    required: false
+  access:
+    description: 'public 或 private'
+    required: true
+  dynamic_description:
+    description: '是否注入分支/commit 信息'
+    required: false
+    default: 'false'
+  token:
+    description: 'GitHub Token（需要 variables 写权限）'
+    required: true
+  roblosecurity:
+    description: 'Roblox 凭证'
+    required: true
+  action:
+    description: '操作类型：deploy（默认）或 cleanup'
+    required: false
+    default: 'deploy'
+  cleanup_days:
+    description: '清理超过多少天未更新的槽位'
+    required: false
+    default: '7'
+
+outputs:
+  environment:
+    description: '部署的环境名（如 production, bugfix-3）'
+  slot:
+    description: '槽位编号（仅动态槽位）'
+  preempted_branch:
+    description: '被抢占的分支（如有）'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+branding:
+  icon: 'upload-cloud'
+  color: 'blue'
