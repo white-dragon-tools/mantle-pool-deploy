@@ -69,6 +69,7 @@ export function findOldestSlot(state: PoolState): number | null {
 export function allocateSlot(
   state: PoolState,
   branch: string,
+  poolName: string,
   now?: Date
 ): SlotAllocationResult | null {
   const timestamp = (now || new Date()).toISOString();
@@ -78,7 +79,7 @@ export function allocateSlot(
     state.slots[String(existingSlot)] = { branch, updated: timestamp };
     return {
       slot: existingSlot,
-      environment: `slot-${existingSlot}`,
+      environment: `${poolName}-${existingSlot}`,
       isNew: false,
     };
   }
@@ -88,7 +89,7 @@ export function allocateSlot(
     state.slots[String(freeSlot)] = { branch, updated: timestamp };
     return {
       slot: freeSlot,
-      environment: `slot-${freeSlot}`,
+      environment: `${poolName}-${freeSlot}`,
       isNew: true,
     };
   }
@@ -99,7 +100,7 @@ export function allocateSlot(
     state.slots[String(oldestSlot)] = { branch, updated: timestamp };
     return {
       slot: oldestSlot,
-      environment: `slot-${oldestSlot}`,
+      environment: `${poolName}-${oldestSlot}`,
       preemptedBranch,
       isNew: true,
     };

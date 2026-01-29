@@ -30072,7 +30072,7 @@ async function handlePoolDeploy(inputs) {
         }
         return;
     }
-    const result = (0, slot_pool_1.allocateSlot)(state, inputs.branch);
+    const result = (0, slot_pool_1.allocateSlot)(state, inputs.branch, inputs.pool);
     if (!result) {
         throw new Error('Failed to allocate slot');
     }
@@ -30214,14 +30214,14 @@ function findOldestSlot(state) {
     }
     return oldestSlot;
 }
-function allocateSlot(state, branch, now) {
+function allocateSlot(state, branch, poolName, now) {
     const timestamp = (now || new Date()).toISOString();
     const existingSlot = findSlotByBranch(state, branch);
     if (existingSlot !== null) {
         state.slots[String(existingSlot)] = { branch, updated: timestamp };
         return {
             slot: existingSlot,
-            environment: `slot-${existingSlot}`,
+            environment: `${poolName}-${existingSlot}`,
             isNew: false,
         };
     }
@@ -30230,7 +30230,7 @@ function allocateSlot(state, branch, now) {
         state.slots[String(freeSlot)] = { branch, updated: timestamp };
         return {
             slot: freeSlot,
-            environment: `slot-${freeSlot}`,
+            environment: `${poolName}-${freeSlot}`,
             isNew: true,
         };
     }
@@ -30240,7 +30240,7 @@ function allocateSlot(state, branch, now) {
         state.slots[String(oldestSlot)] = { branch, updated: timestamp };
         return {
             slot: oldestSlot,
-            environment: `slot-${oldestSlot}`,
+            environment: `${poolName}-${oldestSlot}`,
             preemptedBranch,
             isNew: true,
         };

@@ -3,6 +3,7 @@ import * as github from '@actions/github';
 import { ActionInputs } from './types';
 import { allocateSlot, releaseSlot, cleanupOldSlots } from './slot-pool';
 import { getPoolState, savePoolState } from './github-api';
+import { installMantle, deployWithMantle } from './mantle';
 
 function getInputs(): ActionInputs {
   return {
@@ -41,7 +42,7 @@ async function handlePoolDeploy(inputs: ActionInputs): Promise<void> {
     return;
   }
 
-  const result = allocateSlot(state, inputs.branch);
+  const result = allocateSlot(state, inputs.branch, inputs.pool);
   if (!result) {
     throw new Error('Failed to allocate slot');
   }

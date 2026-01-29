@@ -156,8 +156,9 @@ describe('slot-pool', () => {
           '3': null,
         },
       };
-      const result = allocateSlot(state, 'feature/x', now);
+      const result = allocateSlot(state, 'feature/x', 'bugfix', now);
       expect(result?.slot).toBe(2);
+      expect(result?.environment).toBe('bugfix-2');
       expect(result?.isNew).toBe(false);
       expect(state.slots['2']?.updated).toBe(now.toISOString());
     });
@@ -171,8 +172,9 @@ describe('slot-pool', () => {
           '3': null,
         },
       };
-      const result = allocateSlot(state, 'feature/new', now);
+      const result = allocateSlot(state, 'feature/new', 'feature', now);
       expect(result?.slot).toBe(2);
+      expect(result?.environment).toBe('feature-2');
       expect(result?.isNew).toBe(true);
       expect(state.slots['2']?.branch).toBe('feature/new');
     });
@@ -185,8 +187,9 @@ describe('slot-pool', () => {
           '2': { branch: 'newer', updated: '2024-01-10T00:00:00Z' },
         },
       };
-      const result = allocateSlot(state, 'feature/new', now);
+      const result = allocateSlot(state, 'feature/new', 'bugfix', now);
       expect(result?.slot).toBe(1);
+      expect(result?.environment).toBe('bugfix-1');
       expect(result?.preemptedBranch).toBe('old');
       expect(result?.isNew).toBe(true);
       expect(state.slots['1']?.branch).toBe('feature/new');
