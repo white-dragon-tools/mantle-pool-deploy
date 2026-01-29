@@ -30051,6 +30051,7 @@ function getInputs() {
         dynamicDescription: core.getInput('dynamic_description') === 'true',
         token: core.getInput('token', { required: true }),
         roblosecurity: core.getInput('roblosecurity', { required: true }),
+        openCloudApiKey: core.getInput('open_cloud_api_key') || undefined,
         action: (core.getInput('action') || 'deploy'),
         cleanupDays: parseInt(core.getInput('cleanup_days') || '7', 10),
     };
@@ -30102,6 +30103,7 @@ async function handlePoolDeploy(inputs) {
         dynamicDescription: inputs.dynamicDescription,
         branch: inputs.branch,
         roblosecurity: inputs.roblosecurity,
+        openCloudApiKey: inputs.openCloudApiKey,
     });
     // Save Mantle state back to slot
     const newMantleState = (0, mantle_1.saveMantleState)(inputs.config);
@@ -30121,6 +30123,7 @@ async function handleFixedDeploy(inputs) {
         dynamicDescription: inputs.dynamicDescription,
         branch: inputs.branch,
         roblosecurity: inputs.roblosecurity,
+        openCloudApiKey: inputs.openCloudApiKey,
     });
 }
 async function handleCleanup(inputs) {
@@ -30259,7 +30262,7 @@ function saveMantleState(configPath) {
     return fs.readFileSync(stateFilePath, 'utf-8');
 }
 async function deployWithMantle(options) {
-    const { config, environment, dynamicDescription, branch, roblosecurity } = options;
+    const { config, environment, dynamicDescription, branch, roblosecurity, openCloudApiKey } = options;
     if (!fs.existsSync(config)) {
         throw new Error(`Mantle config file not found: ${config}`);
     }
@@ -30268,6 +30271,9 @@ async function deployWithMantle(options) {
         ...process.env,
         ROBLOSECURITY: roblosecurity,
     };
+    if (openCloudApiKey) {
+        env.MANTLE_OPEN_CLOUD_API_KEY = openCloudApiKey;
+    }
     if (dynamicDescription) {
         const sha = process.env.GITHUB_SHA?.substring(0, 7) || 'unknown';
         env.MANTLE_DESCRIPTION_SUFFIX = `\n\nBranch: ${branch}\nCommit: ${sha}`;

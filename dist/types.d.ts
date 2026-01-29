@@ -17,6 +17,7 @@ export interface ActionInputs {
     dynamicDescription: boolean;
     token: string;
     roblosecurity: string;
+    openCloudApiKey?: string;
     action: 'deploy' | 'cleanup';
     cleanupDays: number;
 }

@@ -9,5 +9,6 @@ export interface MantleDeployOptions {
     dynamicDescription: boolean;
     branch: string;
     roblosecurity: string;
+    openCloudApiKey?: string;
 }
 export declare function deployWithMantle(options: MantleDeployOptions): Promise<void>;

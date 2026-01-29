@@ -65,10 +65,11 @@ export interface MantleDeployOptions {
   dynamicDescription: boolean;
   branch: string;
   roblosecurity: string;
+  openCloudApiKey?: string;
 }
 
 export async function deployWithMantle(options: MantleDeployOptions): Promise<void> {
-  const { config, environment, dynamicDescription, branch, roblosecurity } = options;
+  const { config, environment, dynamicDescription, branch, roblosecurity, openCloudApiKey } = options;
 
   if (!fs.existsSync(config)) {
     throw new Error(`Mantle config file not found: ${config}`);
@@ -80,6 +81,10 @@ export async function deployWithMantle(options: MantleDeployOptions): Promise<vo
     ...process.env as Record<string, string>,
     ROBLOSECURITY: roblosecurity,
   };
+
+  if (openCloudApiKey) {
+    env.MANTLE_OPEN_CLOUD_API_KEY = openCloudApiKey;
+  }
 
   if (dynamicDescription) {
     const sha = process.env.GITHUB_SHA?.substring(0, 7) || 'unknown';

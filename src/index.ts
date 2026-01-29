@@ -16,6 +16,7 @@ function getInputs(): ActionInputs {
     dynamicDescription: core.getInput('dynamic_description') === 'true',
     token: core.getInput('token', { required: true }),
     roblosecurity: core.getInput('roblosecurity', { required: true }),
+    openCloudApiKey: core.getInput('open_cloud_api_key') || undefined,
     action: (core.getInput('action') || 'deploy') as 'deploy' | 'cleanup',
     cleanupDays: parseInt(core.getInput('cleanup_days') || '7', 10),
   };
@@ -75,6 +76,7 @@ async function handlePoolDeploy(inputs: ActionInputs): Promise<void> {
     dynamicDescription: inputs.dynamicDescription,
     branch: inputs.branch,
     roblosecurity: inputs.roblosecurity,
+    openCloudApiKey: inputs.openCloudApiKey,
   });
 
   // Save Mantle state back to slot
@@ -97,6 +99,7 @@ async function handleFixedDeploy(inputs: ActionInputs): Promise<void> {
     dynamicDescription: inputs.dynamicDescription,
     branch: inputs.branch,
     roblosecurity: inputs.roblosecurity,
+    openCloudApiKey: inputs.openCloudApiKey,
   });
 }
 

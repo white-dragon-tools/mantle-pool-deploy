@@ -31,6 +31,9 @@ inputs:
   roblosecurity:
     description: 'Roblox 凭证'
     required: true
+  open_cloud_api_key:
+    description: 'Roblox Open Cloud API Key'
+    required: false
   action:
     description: '操作类型：deploy（默认）或 cleanup'
     required: false
