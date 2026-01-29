@@ -68,13 +68,13 @@ export interface MantleDeployOptions {
 }
 
 export async function deployWithMantle(options: MantleDeployOptions): Promise<void> {
-  const { config, environment, access, dynamicDescription, branch, roblosecurity } = options;
+  const { config, environment, dynamicDescription, branch, roblosecurity } = options;
 
   if (!fs.existsSync(config)) {
     throw new Error(`Mantle config file not found: ${config}`);
   }
 
-  const args = ['deploy', '--environment', environment, '--access', access];
+  const args = ['deploy', '--environment', environment];
 
   const env: Record<string, string> = {
     ...process.env as Record<string, string>,

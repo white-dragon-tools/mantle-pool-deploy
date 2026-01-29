@@ -30259,11 +30259,11 @@ function saveMantleState(configPath) {
     return fs.readFileSync(stateFilePath, 'utf-8');
 }
 async function deployWithMantle(options) {
-    const { config, environment, access, dynamicDescription, branch, roblosecurity } = options;
+    const { config, environment, dynamicDescription, branch, roblosecurity } = options;
     if (!fs.existsSync(config)) {
         throw new Error(`Mantle config file not found: ${config}`);
     }
-    const args = ['deploy', '--environment', environment, '--access', access];
+    const args = ['deploy', '--environment', environment];
     const env = {
         ...process.env,
         ROBLOSECURITY: roblosecurity,
