@@ -1,0 +1,31 @@
+name: 'Roblox Place Action'
+description: 'Create, delete, and list Roblox places using private API'
+author: ''
+
+inputs:
+  action:
+    description: 'Action to perform: create, delete, or list'
+    required: true
+  roblosecurity:
+    description: 'Roblox .ROBLOSECURITY cookie for authentication'
+    required: true
+  experience_id:
+    description: 'Roblox Experience (Universe) ID'
+    required: true
+  place_id:
+    description: 'Roblox Place ID (required for delete action)'
+    required: false
+
+outputs:
+  place_id:
+    description: 'Created place ID (for create action)'
+  places:
+    description: 'JSON array of places (for list action)'
+
+runs:
+  using: 'node20'
+  main: 'dist/index.js'
+
+branding:
+  icon: 'box'
+  color: 'red'
